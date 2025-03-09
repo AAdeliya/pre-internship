@@ -27,13 +27,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <ClerkProvider>
       <html lang="en">
-        <head /> {/* ✅ Add head to prevent missing tags */}
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
