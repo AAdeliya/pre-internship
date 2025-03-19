@@ -1,129 +1,176 @@
-// datasource and generator
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+enum Plans {
+  FREE
+  BASIC
+  PREMIUM
 }
 
-// Models
+enum Role {
+  USER
+  ADMIN
+  SUPPORT
+}
+
 model User {
   id        String   @id @default(uuid())
   fullname  String
-  clerkId   String
+  clerkId   String   @unique
   type      String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  stripeId  String?
+  updateAt  DateTime @updatedAt
+  stripeId  String? // Nullable in case Stripe isn't used
 
-  // Relations
-  billings  Billings[]
+  billing   Billings?
   campaigns Campaign[]
-  domains   Domain[]
+  domains   Domain[] // One user can have multiple domains
 }
 
 model Billings {
-  id       String @id @default(uuid())
-  plan     String
-  credits  Int
-  userId   String
-  user     User   @relation(fields: [userId], references: [id])
+  id      String @id @default(cuid())
+  plan    Plans
+  credits Int
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
 model Campaign {
-  id         String   @id @default(uuid())
-  name       String
-  customers  String[]
-  userId     String
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  name      String
+  customers String[]
+  userId    String
+  createdAt DateTime @default(now())
 
-  // Relations
-  domains Domain[]
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domains Domain[] // A campaign can belong to multiple domains
 }
 
 model Domain {
-  id          String   @id @default(uuid())
-  name        String
-  icon        String
-  userId      String
-  campaignId  String
-  user        User     @relation(fields: [userId], references: [id])
-  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  id         String  @id @default(cuid())
+  name       String
+  icon       String
+  userId     String
+  campaignId String?
 
-  // Relations
-  chatbots       Chatbot[]
-  filtersQuestions FiltersQuestions[]
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  chatBot         ChatBot?
+  helpDesks       HelpDesk[]
+  filterQuestions FilterQuestions[]
   customers       Customer[]
   products        Product[]
-  bookings        Bookings[]
+  bookings        Booking[]
 }
 
-model Chatbot {
-  id              String @id @default(uuid())
-  welcomeMessage  String
-  icon            String
-  background      String
-  textColor       String
-  helpdesk        Boolean
-  domainId        String
-  domain          Domain @relation(fields: [domainId], references: [id])
+model ChatBot {
+  id             String  @id @default(cuid())
+  welcomeMessage String
+  icon           String
+  background     String
+  textColor      String
+  helpdesk       Boolean
+  domainId       String  @unique
 
-  // Relations
-  chatMessages ChatMessage[]
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
 }
 
-model FiltersQuestions {
-  id         String @id @default(uuid())
-  question   String
-  answer     String
-  demand     String
-  domainId   String
-  domain     Domain @relation(fields: [domainId], references: [id])
+model HelpDesk {
+  id       String @id @default(cuid())
+  question String
+  answer   String
+  domainId String
+
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+}
+
+model FilterQuestions {
+  id       String @id @default(cuid())
+  question String
+  answered String
+  domainId String
+
+  domain    Domain             @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  responses CustomerResponse[]
 }
 
 model Customer {
-  id        String @id @default(uuid())
-  email     String
-  demand    String
-  domainId  String
-  domain    Domain @relation(fields: [domainId], references: [id])
+  id       String @id @default(cuid())
+  email    String @unique
+  domainId String
 
-  // Relations
-  bookings Bookings[]
+  domain    Domain             @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  responses CustomerResponse[]
+  chatRooms ChatRoom[]
+  bookings  Booking[]
+}
+
+model CustomerResponse {
+  id               String @id @default(cuid())
+  question         String
+  answered         String
+  customerId       String
+  filterQuestionId String
+
+  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  filterQuestion FilterQuestions @relation(fields: [filterQuestionId], references: [id], onDelete: Cascade)
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String
-  price       Int
-  image       String
-  createdAt   DateTime @default(now())
-  domainId    String
-  domain      Domain @relation(fields: [domainId], references: [id])
+  id        String   @id @default(cuid())
+  name      String
+  price     Int
+  image     String
+  createdAt DateTime @default(now())
+  domainId  String
+
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
 }
 
-model Bookings {
-  id        String   @id @default(uuid())
-  date      DateTime
-  email     String
+model ChatRoom {
+  id         String   @id @default(cuid())
+  live       Boolean
+  mailed     Boolean
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   customerId String
-  domainId  String
-  createdAt DateTime @default(now())
-  domain    Domain @relation(fields: [domainId], references: [id])
-  customer  Customer @relation(fields: [customerId], references: [id])
+
+  customer Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+  bookings Booking[]
 }
 
 model ChatMessage {
-  id            String   @id @default(uuid())
-  message       String
-  role          String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  chatRoomId    String
-  seen          Boolean
-  chatRoom      Chatbot  @relation(fields: [chatRoomId], references: [id])
+  id         String   @id @default(cuid())
+  message    String
+  role       Role
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  chatRoomId String
+  seen       Boolean  @default(false)
+
+  chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  date       DateTime
+  slot       String
+  email      String
+  customerId String
+  domainId   String
+  createdAt  DateTime @default(now())
+
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade, map: "Booking_Customer_fkey")
+  domain   Domain    @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  chatRoom ChatRoom? @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  chatRoomId String?
 }

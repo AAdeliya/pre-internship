@@ -13,7 +13,7 @@ export default function SignUpPage() {
     if (isSignedIn) {
       router.push("/dashboard");
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, router]);
 
   return <SignUp />;
 }
