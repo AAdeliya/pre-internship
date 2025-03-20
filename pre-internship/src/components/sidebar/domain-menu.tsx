@@ -30,6 +30,7 @@ const DomainMenu = ({ domains, min }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
   const [iconUrl, setIconUrl] = useState("");
   const { toast } = useToast();
+  console.log(domains);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +87,6 @@ const DomainMenu = ({ domains, min }: Props) => {
           onClick={() => setIsOpen(true)}
         />
       </div>
-
       <Dialog
         open={isOpen}
         onOpenChange={(open) => {
@@ -161,7 +161,7 @@ const DomainMenu = ({ domains, min }: Props) => {
           </form>
         </DialogContent>
       </Dialog>
-
+      //Domain on the left nav
       <div className="space-y-2">
         {domains?.map((domain) => (
           <Link
